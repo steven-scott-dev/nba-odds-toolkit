@@ -5,7 +5,6 @@ interface BestLine {
   price: number;
   book: string;
 }
-
 interface GameResult {
   game_id: string;
   commence_time: string;
@@ -14,7 +13,6 @@ interface GameResult {
   best_home: BestLine | null;
   best_away: BestLine | null;
 }
-
 interface Snapshot {
   game_id: string;
   captured_at: string;
@@ -107,7 +105,6 @@ function LineCell({ line, colorClass }: { line: BestLine | null; colorClass: str
 
 export const revalidate = 60;
 
-
 export default async function HomePage() {
   const games = await getGames();
   const updatedAt = new Date().toLocaleString("en-US", {
@@ -197,4 +194,4 @@ export default async function HomePage() {
       </footer>
     </div>
   );
-  
+}

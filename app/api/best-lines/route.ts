@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase"
 
-type SnapshotRow = {
+type Row = {
   game_id: string
   home_team: string | null
   away_team: string | null
@@ -10,13 +10,8 @@ type SnapshotRow = {
   bookmaker: string | null
 }
 
-type Best = {
-  spread: number | null
-  price: number | null
-  book: string | null
-}
-
-type GameBest = {
+type Best = { spread: number | null; price: number | null; book: string | null }
+type Game = {
   game_id: string
   home_team: string | null
   away_team: string | null
@@ -31,16 +26,14 @@ export async function GET() {
     .order("captured_at", { ascending: false })
     .limit(2000)
 
-  if (error) {
-    return Response.json({ ok: false, error: error.message }, { status: 500 })
-  }
+  if (error) return Response.json({ ok: false, error: error.message }, { status: 500 })
 
-  const rows = (data ?? []) as SnapshotRow[]
-
-  const games: Record<string, GameBest> = {}
+  const rows = (data ?? []) as Row[]
+  const games: Record<string, Game> = {}
 
   for (const row of rows) {
     const id = row.game_id
+
     if (!games[id]) {
       games[id] = {
         game_id: id,
@@ -54,6 +47,45 @@ export async function GET() {
     const g = games[id]
 
     if (row.team === row.home_team) {
-      // For favorites (negative spreads), closer to 0 is better. For dogs (positive), bigger is better.
-      if (!g.best_home || betterSpread(row.spread, g.best_home.spread) || tieBetterPrice(row, g.best_home)) {
-        g.best_home = { spread: row
+      if (!g.best_home || isBetter(row.spread, g.best_home.spread, row.price, g.best_home.price)) {
+        g.best_home = { spread: row.spread, price: row.price, book: row.bookmaker }
+      }
+    }
+
+    if (row.team === row.away_team) {
+      if (!g.best_away || isBetter(row.spread, g.best_away.spread, row.price, g.best_away.price)) {
+        g.best_away = { spread: row.spread, price: row.price, book: row.bookmaker }
+      }
+    }
+  }
+
+  return Response.json(Object.values(games))
+}
+
+function isBetter(
+  newSpread: number | null,
+  oldSpread: number | null,
+  newPrice: number | null,
+  oldPrice: number | null
+) {
+  if (newSpread === null) return false
+  if (oldSpread === null) return true
+
+  const newIsDog = newSpread > 0
+  const oldIsDog = oldSpread > 0
+
+  // Prefer better spread first
+  if (newIsDog && oldIsDog) {
+    if (newSpread !== oldSpread) return newSpread > oldSpread
+  } else if (!newIsDog && !oldIsDog) {
+    if (newSpread !== oldSpread) return newSpread > oldSpread // -3 better than -4
+  } else {
+    // weird mixed data: pick closer to 0
+    if (newSpread !== oldSpread) return Math.abs(newSpread) < Math.abs(oldSpread)
+  }
+
+  // Tie-breaker: better payout
+  const np = newPrice ?? -9999
+  const op = oldPrice ?? -9999
+  return np > op
+}

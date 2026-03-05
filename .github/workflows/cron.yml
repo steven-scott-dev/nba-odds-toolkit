@@ -1,0 +1,13 @@
+name: Fetch Odds
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call endpoint
+        run: curl ${{ secrets.CRON_URL }}

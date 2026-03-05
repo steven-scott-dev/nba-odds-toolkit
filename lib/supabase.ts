@@ -1,3 +1,6 @@
+`lib/supabase.ts`
+
+```ts
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.SUPABASE_URL;
@@ -12,3 +15,4 @@ if (!url || !key) {
 export const supabase = createClient(url, key, {
   auth: { persistSession: false },
 });
+```
